@@ -1,0 +1,17 @@
+body {
+  font-family: 'VT323', sans-serif;
+  background-image: url('/background.png') 
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+}
+
+#screen {
+  min-height: 100%; 
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
