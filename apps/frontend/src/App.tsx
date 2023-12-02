@@ -1,11 +1,12 @@
 import './App.css'
 import '@fontsource/vt323';
-import { useState } from 'react';
 import GameScreen from './components/screens/GameScreen';
 import MainScreen from './components/screens/MainScreen';
+import { useSelector } from 'react-redux';
+import { RootState } from './app/store';
 
 export default function App() {
-  const [screenToDisplay, setScreenToDisplay] = useState('GAME');
+  const screenToDisplay = useSelector((state: RootState) => state.screen.state);
   return (
     <>
       {screenToDisplay === 'MAIN' && <MainScreen />}
