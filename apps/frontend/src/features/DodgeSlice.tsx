@@ -28,8 +28,8 @@ export const dodgeSlice = createSlice({
         setPlayerDimensions: (state, action: PayloadAction<[number, number]>) => {
             state.playerDimensions = action.payload;
         },
-        initialize: (state, action: PayloadAction<Bullet[]>) => {
-            state.bullets = JSON.parse(JSON.stringify(action.payload));
+        initialize: (state) => {
+            state.bullets = [];
             state.hitCount = 0;
             state.lastUpdate = 0;
         },
@@ -41,7 +41,7 @@ export const dodgeSlice = createSlice({
             const playerY = action.payload[1] + (state.playerDimensions[1] / 2);
             const updatedBullets: Bullet[] = [];
             for (let i = 0; i < state.bullets.length; i++) {
-                const curr = state.bullets[i]; 
+                const curr = state.bullets[i];
                 const bulletX = curr.pos[0] + (curr.radius / 2);
                 const bulletY = curr.pos[1] + (curr.radius / 2);
                 const dist = Math.sqrt(Math.pow(bulletX - playerX, 2) + Math.pow(bulletY - playerY, 2));
@@ -49,18 +49,21 @@ export const dodgeSlice = createSlice({
                     state.hitCount += 1;
                 } else {
                     curr.speed += curr.acceleration * deltaTime / 1000;
-                    curr.pos[0] += (Math.cos(curr.direction) * curr.speed * deltaTime) / 1000;
-                    curr.pos[1] += (Math.cos(curr.direction) * curr.speed * deltaTime) / 1000;
-                    if (!(curr.pos[0] <= 0 || curr.pos[0] >= state.areaDimensions[0] - curr.radius ||
-                        curr.pos[1] <= 0 || curr.pos[1] >= state.areaDimensions[1] - curr.radius)) {
+                    curr.pos[0] += Math.floor((Math.cos(curr.direction) * curr.speed * deltaTime) / 1000);
+                    curr.pos[1] += Math.floor((Math.sin(curr.direction) * curr.speed * deltaTime) / 1000);
+                    if (!(curr.pos[0] < 0 || curr.pos[0] > state.areaDimensions[0] - curr.radius ||
+                        curr.pos[1] < 0 || curr.pos[1] > state.areaDimensions[1] - curr.radius)) {
                         updatedBullets.push(curr);
                     }
                 }
             }
             state.bullets = JSON.parse(JSON.stringify(updatedBullets));
-        }
+        },
+        addBullets: (state, action: PayloadAction<Bullet[]>) => {
+            state.bullets = state.bullets.concat(JSON.parse(JSON.stringify(action.payload)));
+        },
     }
 });
 
-export const { setAreaDimensions, setPlayerDimensions, initialize, updateBullets } = dodgeSlice.actions;
+export const { setAreaDimensions, setPlayerDimensions, initialize, updateBullets, addBullets } = dodgeSlice.actions;
 export default dodgeSlice.reducer;
