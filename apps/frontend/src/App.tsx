@@ -6,11 +6,11 @@ import { useSelector } from 'react-redux';
 import { RootState } from './app/store';
 
 export default function App() {
-  const screenToDisplay = useSelector((state: RootState) => state.screen.state);
+  const {state, levelNo} = useSelector((state: RootState) => state.gameState);
   return (
     <>
-      {screenToDisplay === 'MAIN' && <MainScreen />}
-      {screenToDisplay === 'GAME' && <GameScreen />}
+      {state === 'MAIN' && <MainScreen />}
+      {state === 'GAME' && <GameScreen levelNo={levelNo}/>}
     </>
   )
 }
