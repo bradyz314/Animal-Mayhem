@@ -1,16 +1,18 @@
-import { Schema, model } from "mongoose"
+import { Schema, model } from "mongoose";
 
-const SkillSchema = new Schema({
-    skillId: Number,
-    name: String,
+const skillEffectSchema = new Schema({
     targetSelf: Boolean,
-    statToChange: String,
-    scaling: Number,
-    additionalEffect: [{
-        targetSelf: Boolean,
-        statToChange: String,
-        scaling: Number,
-    }],
+    stat: String,
+    scaling: [Number],
 });
-const Skill = model("Skill", SkillSchema);
-export default Skill;
+
+const skillSchema = new Schema({
+    name: String,
+    description: String,
+    cost: Number,
+    patternIndex: Number,
+    effects: [skillEffectSchema]
+});
+
+export const SkillEffect = model('SkillEffect', skillEffectSchema);
+export const Skill = model('Skill', skillSchema);
