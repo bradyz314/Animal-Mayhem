@@ -17,23 +17,23 @@ export default function DodgeArea() {
     const [x, setX] = useState(0);
     const [y, setY] = useState(0);
     // Refs
-    const divRef : React.RefObject<HTMLDivElement> = useRef(null);
-    const imgRef : React.RefObject<HTMLImageElement> = useRef(null);
+    const divRef: React.RefObject<HTMLDivElement> = useRef(null);
+    const imgRef: React.RefObject<HTMLImageElement> = useRef(null);
     // Redux
     const bullets: Bullet[] = useSelector((state: RootState) => state.dodge.bullets);
     const dispatch = useDispatch();
     useLayoutEffect(() => {
-        if(divRef.current && imgRef.current) {
+        if (divRef.current && imgRef.current) {
             dispatch(setAreaDimensions([divRef.current.offsetWidth, divRef.current.offsetHeight]));
             dispatch(setPlayerDimensions([imgRef.current.offsetWidth, imgRef.current.offsetHeight]));
             const state: RootState = store.getState();
             setX((state.dodge.areaDimensions[0] - state.dodge.playerDimensions[0]) / 2);
-            setY((state.dodge.areaDimensions[1] - state.dodge.playerDimensions[1])/ 2);
-        } 
+            setY((state.dodge.areaDimensions[1] - state.dodge.playerDimensions[1]) / 2);
+        }
     }, [setX, setY, dispatch]);
     useEffect(() => { // Add event listeners for the key presses
         const handleKey = (key: string, pressed: boolean) => {
-            switch(key.toLowerCase()) {
+            switch (key.toLowerCase()) {
                 case 'a':
                     setLeft(pressed);
                     break;
@@ -65,27 +65,27 @@ export default function DodgeArea() {
     });
     const updatePlayer = () => {
         let xSpeed = 0;
-          let ySpeed = 0;
-          if (left) xSpeed -= 1;
-          if (right) xSpeed += 1;
-          if (up) ySpeed -= 1;
-          if (down) ySpeed += 1; 
-          if (xSpeed != 0 && ySpeed != 0) {
+        let ySpeed = 0;
+        if (left) xSpeed -= 1;
+        if (right) xSpeed += 1;
+        if (up) ySpeed -= 1;
+        if (down) ySpeed += 1;
+        if (xSpeed != 0 && ySpeed != 0) {
             xSpeed /= Math.sqrt(2);
             ySpeed /= Math.sqrt(2);
-          }
-          const newX = x + MOVE_SPEED * xSpeed;
-          const newY = y + MOVE_SPEED * ySpeed;
-          const state: RootState = store.getState();
-          if (newX >= MIN_BORDER && newX <= state.dodge.areaDimensions[0] - state.dodge.playerDimensions[0]) setX(newX);
-          if (newY >= MIN_BORDER && newY <= state.dodge.areaDimensions[1] - state.dodge.playerDimensions[1]) setY(newY);
+        }
+        const newX = x + MOVE_SPEED * xSpeed;
+        const newY = y + MOVE_SPEED * ySpeed;
+        const state: RootState = store.getState();
+        if (newX >= MIN_BORDER && newX <= state.dodge.areaDimensions[0] - state.dodge.playerDimensions[0]) setX(newX);
+        if (newY >= MIN_BORDER && newY <= state.dodge.areaDimensions[1] - state.dodge.playerDimensions[1]) setY(newY);
     }
     useEffect(() => {
-        const intervalID = setInterval(() => {
-          updatePlayer();
-          dispatch(updateBullets([x, y]));
+        const updateId = setInterval(() => {
+            updatePlayer();
+            dispatch(updateBullets([x, y]));
         }, 50);
-        return () => clearInterval(intervalID)
+        return () => clearInterval(updateId);
     });
     return (
         <div
@@ -96,17 +96,17 @@ export default function DodgeArea() {
                 src='/player/heart.png'
                 ref={imgRef}
                 className='absolute w-6 h-5 self-center flex'
-                style= {{
+                style={{
                     top: `${y}px`,
                     left: `${x}px`
                 }}
             />
             {bullets.map((bullet: Bullet, idx: number) => (
-                <img 
+                <img
                     src={bullet.imgPath}
                     key={idx}
                     className='absolute'
-                    style = {{
+                    style={{
                         top: `${bullet.pos[1]}px`,
                         left: `${bullet.pos[0]}px`,
                         width: `${bullet.radius}px`,
@@ -115,7 +115,7 @@ export default function DodgeArea() {
                     }}
                 />
             ))}
-            
+
         </div>
     )
 }
