@@ -9,8 +9,9 @@ const userSchema = new Schema({
         attack: Number,
         defense: Number,
         maxLevelUnlocked: Number,
-        selectedSkills: [Number],
-        ownedSkills: [Number],
+        selectedSkills: [String],
+        ownedSkills: [String],
+        coins: Number,
     }
 });
 
@@ -23,7 +24,7 @@ userSchema.pre('save', function generateHash(next) {
             this.password = hash;
             next();
        });
-    })
+    }) 
 });
 
 const User = model('User', userSchema);

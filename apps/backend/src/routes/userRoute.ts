@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import User from "../models/user";
 import isAuthenticated from "../middleware/isAuthenticated";
 
-const accountRounter = Router();
+const accountRouter = Router();
 
 interface LoginCredentials {
     username: string,
@@ -11,7 +11,7 @@ interface LoginCredentials {
 }
 
 // Sign Up Route
-accountRounter.post('/signup', async (req, res) => {
+accountRouter.post('/signup', async (req, res) => {
     try {
         const {username, password} = req.body as LoginCredentials;
         const user = await User.findOne({username});
@@ -26,8 +26,9 @@ accountRounter.post('/signup', async (req, res) => {
                     attack: 10,
                     defense: 10,
                     maxLevelUnlocked: 1,
-                    selectedSkills: [0, 1, 2, 3],
-                    ownedSkills: [0, 1, 2, 3], 
+                    selectedSkills: ["Peck"],
+                    ownedSkills: ["Peck"], 
+                    coins: 0,
                 }
             });
             newUser.save();
@@ -39,7 +40,7 @@ accountRounter.post('/signup', async (req, res) => {
 });
 
 // Log In Route
-accountRounter.post('/login', async (req, res) => {
+accountRouter.post('/login', async (req, res) => {
     const {username, password} = req.body as LoginCredentials;
     try {
         const user = await User.findOne({username});
@@ -67,7 +68,7 @@ accountRounter.post('/login', async (req, res) => {
 });
 
 // Log Out Route
-accountRounter.post('/logout', isAuthenticated, (req, res) => {
+accountRouter.post('/logout', isAuthenticated, (req, res) => {
     try {
         if (req.session) {
             req.session.username = '';
@@ -79,7 +80,7 @@ accountRounter.post('/logout', isAuthenticated, (req, res) => {
 })
 
 // Get User Route
-accountRounter.get('/user', isAuthenticated, (req, res) => {
+accountRouter.get('/user', isAuthenticated, (req, res) => {
     if (req.session) {
         res.status(200).send(req.session.username);
     } else {
@@ -87,4 +88,43 @@ accountRounter.get('/user', isAuthenticated, (req, res) => {
     }
 });
 
-export default accountRounter;
+accountRouter.get('/currentData', isAuthenticated, async (req, res) => {
+    if (req.session) {
+        const user = await User.findOne({username: req.session.username as string});
+        if (user === null) {
+            res.status(401).send('User does not exist');
+        } else {
+            res.status(200).send(user.playerData);
+        }
+    } else {
+        res.send(500).send('Internal Server Error');
+    }
+});
+
+interface UpdateData {
+    maxHealth: number,
+    attack: number,
+    defense: number,
+    maxLevelUnlocked: number,
+    selectedSkills: [string],
+    ownedSkills: [string],
+    coins: number,
+}
+
+accountRouter.post('/update', isAuthenticated, async (req, res) => {
+    const updatedValues = req.body as UpdateData;
+    if (req.session) {
+        const user = await User.findOne({username: req.session.username as string});
+        if (user === null) {
+            res.status(401).send('User does not exist');
+        } else {
+            user.playerData = updatedValues;
+            user.save();
+            res.status(200).send("Data updated");
+        }
+    } else {
+        res.send(500).send('Internal Server Error');
+    }
+});
+
+export default accountRouter;
