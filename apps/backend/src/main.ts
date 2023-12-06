@@ -3,7 +3,9 @@ import express, { ErrorRequestHandler } from 'express';
 import bodyParser from 'body-parser';
 import cookieSession from 'cookie-session'
 import dotenv from 'dotenv';
-import accountRouter from './routes/account';
+import accountRouter from './routes/userRoute';
+import skillsRouter from './routes/skillRoute';
+import levelRouter from './routes/levelRoute';
 
 dotenv.config();
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/cluster0';
@@ -22,6 +24,7 @@ const handler : ErrorRequestHandler = (err: Error, _req, res, next) => {
     next();
 }
 app.use(handler);
-
 app.use('/account', accountRouter);
+app.use('/skills', skillsRouter);
+app.use('/level', levelRouter);
 app.listen(port, () => {})
