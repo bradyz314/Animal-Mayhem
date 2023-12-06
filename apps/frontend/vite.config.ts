@@ -11,6 +11,14 @@ export default defineConfig({
         target: 'http://localhost:8080',
         secure: false,
       },
+      '/skills': {
+        target: 'http://localhost:8080',
+        secure: false,
+      },
+      '/level': {
+        target: 'http://localhost:8080',
+        secure: false,
+      }
     }
   }
 })
