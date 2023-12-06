@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import AccountMenu from "../menus/AccountMenu";
 import { useDispatch } from "react-redux";
-import { setState } from "../../features/ScreenSlice";
+import { setState } from "../../features/GameStateSlice";
 
 export default function MainScreen() {
     const [show, setShow] = useState(false);
@@ -11,16 +11,16 @@ export default function MainScreen() {
     const dispatch = useDispatch();
     useEffect(() => {
         axios.get('/account/user')
-        .then(res => {
-            if (!res.data) {
-                setUser('')
-            } else {
-                setUser(res.data)
-            }
-        }).catch((err) => {
-            console.log(err);
-        })
-    }, []);
+            .then(res => {
+                if (!res.data) {
+                    setUser('')
+                } else {
+                    setUser(res.data)
+                }
+            }).catch((err) => {
+                console.log(err);
+            })
+    }, [user]);
     return (
         <div
             className='min-h-full flex-col flex items-center justify-center'
@@ -48,14 +48,15 @@ export default function MainScreen() {
                     <button
                         className='rounded-md w-1/4 bg-blue-600 text-xl text-emerald-400 rounded-s m-2 hover:bg-blue-700'
                         onClick={() => {
-                            axios.post(`/account/logout`)
-                            .catch((err) => {
+                            axios.post(`/account/logout`).then(() => {
+                                setUser('');
+                            }).catch((err) => {
                                 alert(`${err.response.data}!`);
                             })
                         }}
-                        >
-                            Log Out 
-                        </button>
+                    >
+                        Log Out
+                    </button>
                 </> :
                 <>
                     <h2
@@ -83,7 +84,7 @@ export default function MainScreen() {
                     </button>
                 </>
             }
-            {show && <AccountMenu login={login} setShow={setShow} setUser={setUser}/>}
+            {show && <AccountMenu login={login} setShow={setShow} setUser={setUser} />}
         </div>
     )
 }
