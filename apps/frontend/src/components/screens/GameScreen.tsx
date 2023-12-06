@@ -2,115 +2,162 @@
 import { useEffect, useState } from 'react';
 // Redux
 import { useDispatch } from 'react-redux';
-import { setEnemyStats, setPlayerStats, updateEnemyAttack, updateEnemyDefense, updateEnemyHealth, updatePlayerAttack, updatePlayerDefense, updatePlayerHealth } from '../../features/EntitySlice';
+import { addEnemySkill, addPlayerSkill, initializeEnemySkills, initializePlayerSkills, setEnemyStats, setPlayerStats, updateEnemyAttack, updateEnemyDefense, updateEnemyHealth, updatePlayerAttack, updatePlayerDefense, updatePlayerHealth } from '../../features/EntitySlice';
 import { resetMessage, setMessage } from '../../features/MessageSlice';
+import { initialize, addBullets } from '../../features/DodgeSlice';
 // Components
 import DodgeArea from '../gameplay/DodgeArea';
 import EntityDisplay from '../gameplay/EntityDisplay';
 import SkillMenu from '../gameplay/SkillMenu';
 import Announcer from '../gameplay/Announcer';
 // Types
-import { Bullet, EntityData, Skill, Stat } from '../../types';
+import { Bullet, SkillEffectInfo, SkillInfo } from '../../types';
 import { RootState, store } from '../../app/store';
-import { initialize } from '../../features/DodgeSlice';
+import patterns from '../../attackPatterns';
+// Axios
+import axios from "axios";
 
-const tempSkill: Skill = {
-    name: 'SKILL',
-    targetSelf: false,
-    statToChange: 'HP',
-    additionalEffect: null,
-    getValue(userAtk) {
-        return -1.5 * userAtk
-    },
+interface GameScreenProps {
+    levelNo: number,
 }
 
-const tempUserData: EntityData = {
-    name: "Chicken",
-    isPlayer: true,
-    imgPath: '/player/chicken.png',
-    maxHealth: 100,
-    attack: 10,
-    defense: 10,
-    skills: [tempSkill, tempSkill, tempSkill, tempSkill],
-}
-
-const generateRandomBullet = () => {
-    return {
-        imgPath: '/bullets/red.png',
-        radius: Math.floor(Math.random() * 10) * 2 + 10,
-        pos: [Math.random() * 450, Math.random() * 200],
-        speed: Math.random() * 50 + 50,
-        acceleration: Math.random() * 100,
-        direction: Math.random() * 2 * Math.PI,
-    } as Bullet
-};
-
-const tempEnemySkill: Skill = {
-    name: 'Bullet Hell',
-    targetSelf: false,
-    statToChange: 'HP',
-    additionalEffect: null,
-    getValue(atk: number) {
-        return -atk;
-    },
-    pattern: {
-        duration: 3500,
-        getBullets: () => [...Array(15)].map(() => generateRandomBullet()),
-    }
-}
-
-const tempEnemyData: EntityData = {
-    name: 'birb',
-    isPlayer: false,
-    imgPath: '/enemies/bird.png',
-    maxHealth: 100,
-    attack: 15,
-    defense: 5,
-    skills: [tempEnemySkill]
-}
-
-export default function GameScreen() {
-    // Make call to database to get user & level information
+export default function GameScreen({ levelNo }: GameScreenProps) {
+    // Constants
     const dispatch = useDispatch();
-    useEffect(() => {
-        dispatch(setPlayerStats([tempUserData.maxHealth, tempUserData.attack, tempUserData.defense]));
-        dispatch(setEnemyStats([tempEnemyData.maxHealth, tempEnemyData.attack, tempEnemyData.defense]));
-        dispatch(resetMessage());
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
     const [playerTurn, setPlayerTurn] = useState(true);
+    const [enemyImgPath, setEnemyImgPath] = useState('');
     const [canUseSkill, setCanUseSkill] = useState(true);
     const [dodging, setDodging] = useState(false);
     const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
-    const handleChange = (targetSelf: boolean, statToChange: Stat, delta: number) => {
+    const handleChange = (targetPlayer: boolean, statToChange: string, delta: number) => {
         switch (statToChange) {
             case 'ATK':
-                if (targetSelf) {
+                if (targetPlayer) {
                     dispatch(updatePlayerAttack(delta));
                 } else {
                     dispatch(updateEnemyAttack(delta));
                 }
                 break;
             case 'HP':
-                if (targetSelf) {
+                if (delta < 0) {
+                    delta += (targetPlayer ? store.getState().playerStats.defense : store.getState().enemyStats.defense) / 2;
+                    if (delta > 0) delta = 0;
+                }
+                if (targetPlayer) {
                     dispatch(updatePlayerHealth(delta));
                 } else {
-                    const enemyDef = store.getState().enemyStats.defense;
-                    delta -= enemyDef;
                     dispatch(updateEnemyHealth(delta));
                 }
                 break;
             case "DEF":
-                if (targetSelf) {
+                if (targetPlayer) {
                     dispatch(updatePlayerDefense(delta));
                 } else {
                     dispatch(updateEnemyDefense(delta));
                 }
         }
-        return `${targetSelf ? `You` : `The enemy`} ${delta < 0 ? `lost` : `gained`} ${delta} ${statToChange}!`;
+        if (delta == 0) {
+            return `There was no change in ${targetPlayer ? `your` : `the enemy's`} ${statToChange}`;
+        } else {
+            return `${targetPlayer ? `You` : `The enemy`} ${delta < 0 ? `lost` : `gained`} ${delta} ${statToChange}!`;
+        }
     }
+    const calculateChanges = (playerCasting: boolean, skill: SkillInfo, hitCount: number) => {
+        const state = store.getState();
+        let resultString = '';
+        for (let i = 0; i < skill.effects.length; i++) {
+            const { targetSelf, stat, scaling } = skill.effects[i];
+            const delta = (state.playerStats.attack * scaling[0] + state.playerStats.defense * scaling[1] + state.playerStats.health * scaling[2]) * hitCount;
+
+            resultString += handleChange(playerCasting ? targetSelf : !targetSelf, stat, delta);
+        }
+        dispatch(setMessage(resultString));
+    }
+    const setSkills = (player: boolean, skills: string[]) => {
+        if (player) {
+            dispatch(initializePlayerSkills());
+        } else {
+            dispatch(initializeEnemySkills());
+        }
+        for (let i = 0; i < skills.length; i += 1) {
+            axios.get(`/skills/getSkill?name=${skills[i]}`).then(skillRes => {
+                const effectInfo: SkillEffectInfo[] = [];
+                const { name, description, cost, patternIndex, effects } = skillRes.data;
+                for (let j = 0; j < effects.length; j += 1) {
+                    const { targetSelf, stat, scaling } = effects[j];
+                    effectInfo.push({
+                        targetSelf,
+                        stat,
+                        scaling
+                    });
+                }
+                const info = {
+                    name,
+                    description,
+                    cost,
+                    patternIndex,
+                    effects: effectInfo
+                };
+                if (player) {
+                    dispatch(addPlayerSkill(info));
+                } else {
+                    dispatch(addEnemySkill(info));
+                }
+            });
+        }
+    }
+    const enemyMove = () => {
+        const enemyData = store.getState().enemyStats;
+        const usedSkill = enemyData.skills[Math.floor(Math.random() * enemyData.skills.length)];
+        dispatch(setMessage(`${enemyData.name} used ${usedSkill.name}! Prepare to dodge!`));
+        delay(1500).then(() => {
+            if (usedSkill.patternIndex !== undefined) {
+                const pattern = patterns[usedSkill.patternIndex];
+                dispatch(initialize());
+                setDodging(true);
+                delay(500).then(() => {
+                    dispatch(addBullets(pattern.getBullets()));
+                    const spawnId = setInterval(() => {
+                        const bullets = pattern.getBullets() as Bullet[];
+                        dispatch(addBullets(bullets));
+                    }, pattern.spawnTime);
+                    delay(pattern.duration).then(() => {
+                        const state = store.getState();
+                        clearInterval(spawnId);
+                        setDodging(false);
+                        dispatch(setMessage(`You were hit ${state.dodge.hitCount} times!`));
+                        delay(1000).then(() => {
+                            calculateChanges(false, usedSkill, state.dodge.hitCount);
+                            delay(1000).then(() => {
+                                setPlayerTurn(true);
+                                setCanUseSkill(true);
+                            });
+                        });
+                    });
+                });
+            }
+        })
+    }
+    // Use Effect to set up User/Enemy
     useEffect(() => {
-        let state: RootState = store.getState();
+        axios.get("/account/user").then(username => {
+            axios.get("/account/currentData").then(dataRes => {
+                dispatch(setPlayerStats([username.data, [dataRes.data.maxHealth, dataRes.data.attack, dataRes.data.defense]]));
+                setSkills(true, dataRes.data.selectedSkills);
+            });
+        });
+        axios.get(`/level/getLevel?levelNo=${levelNo}`).then(levelRes => {
+            const data = levelRes.data.enemyData;
+            dispatch(setEnemyStats([data.name, [data.maxHealth, data.attack, data.defense]]));
+            setEnemyImgPath(data.imgPath);
+            setSkills(false, data.skills);
+        });
+        dispatch(resetMessage());
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+    // Use Effect to handle gameplay
+    useEffect(() => {
+        const state: RootState = store.getState();
         if (state.playerStats.health <= 0) {
             delay(2000).then(() => {
                 dispatch(setMessage(`You lost!`));
@@ -123,44 +170,28 @@ export default function GameScreen() {
             // Transition to RESULT screen
         } else {
             if (!playerTurn) {
-                const numOfSkills = tempEnemyData.skills.length;
-                const skill: Skill = tempEnemyData.skills[Math.floor(Math.random() * numOfSkills)];
-                dispatch(setMessage(`${tempEnemyData.name} used ${skill.name}! Prepare to dodge!`));
-                delay(1500).then(() => {
-                    if (skill.pattern) {
-                        dispatch(initialize(skill.pattern.getBullets()));
-                        setDodging(true);
-                        delay(skill.pattern.duration).then(() => {
-                            state = store.getState();
-                            setDodging(false);
-                            dispatch(setMessage(`You were hit ${state.dodge.hitCount} times!`));
-                            delay(1000).then(() => {
-                                const damage = state.dodge.hitCount * skill.getValue(tempEnemyData.attack);
-                                dispatch(updatePlayerHealth(damage));
-                                dispatch(setMessage(`You lost ${damage} health!`));
-                                delay(1000).then(() => {
-                                    setPlayerTurn(true);
-                                    setCanUseSkill(true);
-                                });
-                            });
-                        });
-                    }
-                })
+                enemyMove();
             } else {
                 dispatch(resetMessage());
             }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [playerTurn])
+    }, [playerTurn]);
     return (
         <div className='grid grid-rows-3 grid-cols-3 min-h-full justify-center items-center'>
-            <EntityDisplay row={'row-start-1'} col={'col-start-3'} data={tempEnemyData} />
+            <EntityDisplay row={'row-start-1'} col={'col-start-3'} player={false} imgPath={enemyImgPath} />
             {dodging ?
                 <DodgeArea /> :
                 <Announcer />
             }
-            <EntityDisplay row={'row-start-3'} col={'col-start-1'} data={tempUserData} />
-            <SkillMenu data={tempUserData} setPlayerTurn={setPlayerTurn} setCanUseSkill={setCanUseSkill} handleChange={handleChange} delay={delay} disabled={!canUseSkill} />
+            <EntityDisplay row={'row-start-3'} col={'col-start-1'} player={true} imgPath={'/player/chicken.png'} />
+            <SkillMenu
+                setPlayerTurn={setPlayerTurn}
+                setCanUseSkill={setCanUseSkill}
+                calculateChanges={calculateChanges}
+                delay={delay}
+                disabled={!canUseSkill}
+            />
         </div>
-    )
+    );
 }
