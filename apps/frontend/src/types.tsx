@@ -1,14 +1,3 @@
-export type Stat = 'ATK' | 'HP' | 'DEF'
-
-export interface Skill {
-    name: string,
-    targetSelf: boolean,
-    statToChange: Stat,
-    additionalEffect: Skill | null,
-    getValue: (userAtk: number) => number,
-    pattern?: AttackPattern,
-}
-
 export interface Bullet {
     imgPath: string,
     radius: number,
@@ -21,14 +10,33 @@ export interface Bullet {
 export interface AttackPattern {
     duration: number,
     getBullets: () => Bullet[],
+    spawnTime: number,
 }
 
-export interface EntityData {
-    name: string,
-    isPlayer: boolean,
-    imgPath: string,
-    maxHealth: number,
-    attack: number,
-    defense: number,
-    skills: Skill[],
+export interface LevelData {
+    levelNo: number,
+    enemyData: {
+        imgPath: string,
+        name: string,
+        maxHealth: number,
+        attack: number,
+        defense: number,
+        selectedSkills: string[],
+    },
+    coinReward: number,
 }
+
+export interface SkillEffectInfo {
+    targetSelf: boolean,
+    stat: string,
+    scaling: number[], // Scaling : ATK, DEF, HP
+}
+
+export interface SkillInfo {
+    name: string,
+    description: string,
+    cost?: number,
+    patternIndex?: number,
+    effects: SkillEffectInfo[]
+}
+
