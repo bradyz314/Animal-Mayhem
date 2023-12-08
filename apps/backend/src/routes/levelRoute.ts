@@ -47,4 +47,17 @@ levelRouter.get('/getLevel', async (req, res) => {
     }
 });
 
+levelRouter.get('/getSortedLevelNumbers', async (req, res) => {
+    try {
+        const levels = await Level.find({}).select('levelNo -_id').sort('levelNo');
+        if (levels === null) {
+            res.status(401).send('Levels do not exist');
+        } else {
+            res.status(200).send(levels);
+        }
+    } catch(err) {
+        res.status(500).send('Encountered issue getting levels');
+    }
+})
+
 export default levelRouter;
