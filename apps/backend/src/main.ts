@@ -3,7 +3,7 @@ import express, { ErrorRequestHandler } from 'express';
 import bodyParser from 'body-parser';
 import cookieSession from 'cookie-session'
 import dotenv from 'dotenv';
-import accountRouter from './routes/userRoute';
+import accountRouter from './routes/accountRoute';
 import skillsRouter from './routes/skillRoute';
 import levelRouter from './routes/levelRoute';
 
