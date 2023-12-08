@@ -26,10 +26,10 @@ const generateRandomBullet = () => {
     } as Bullet
 };
 
-const generateVerticalColumn = (start: boolean, moveLeft: boolean) => {
+const generateVerticalColumn = (start: boolean) => {
     const state: RootState = store.getState();
     const radius = state.dodge.playerDimensions[1] + (state.dodge.areaDimensions[1] % state.dodge.playerDimensions[1]);
-    const colX = start ? 0 : state.dodge.areaDimensions[0] - radius;
+    const colX = start ? 0 : state.dodge.areaDimensions[0] - radius - 5;
     const numOfBullets = Math.floor((state.dodge.areaDimensions[1] === 0 ? 250 : state.dodge.areaDimensions[1]) / radius);
     const bulletToRemove = Math.floor(Math.random() * numOfBullets);
     const column: Bullet[] = [];
@@ -41,7 +41,7 @@ const generateVerticalColumn = (start: boolean, moveLeft: boolean) => {
                 pos: [colX, i * radius],
                 speed: 80,
                 acceleration: 0.1,
-                direction: moveLeft ? Math.PI : 0,
+                direction: !start ? Math.PI : 0,
             });
         }
     }
@@ -78,9 +78,10 @@ const randomBullets: AttackPattern = {
 
 const spawnWalls: AttackPattern = {
     duration: 6000,
-    spawnTime: 1200,
+    spawnTime: 1000,
     getBullets: () => {
-        return generateVerticalColumn(true, false);
+        const rand = Math.random();
+        return generateVerticalColumn(rand <= 0.50);
     }
 }
 
@@ -96,10 +97,34 @@ const spawnSpread: AttackPattern = {
     }
 }
 
+const bulletRain: AttackPattern = {
+    duration: 4000,
+    spawnTime: 1000,
+    getBullets: () => {
+        const bullets: Bullet[] = [];
+        const state: RootState = store.getState();
+        const radius = state.dodge.playerDimensions[1] + (state.dodge.areaDimensions[1] % state.dodge.playerDimensions[1]);
+        const numOfBullets = Math.floor(Math.random() * 10) + 6;
+        for (let i = 0; i < numOfBullets; i++) {
+            const x = Math.random() * (state.dodge.areaDimensions[0] - radius)
+            bullets.push({
+                imgPath: generateBulletImagePath(),
+                radius: 15,
+                pos: [x, radius],
+                speed: -70,
+                acceleration: 0.15,
+                direction: (Math.random() * (Math.PI / 3)) + (4 * Math.PI / 3)  
+            });
+        }
+        return bullets;
+    }
+}
+
 const patterns: AttackPattern[] = [
     randomBullets,
     spawnWalls,
     spawnSpread,
+    bulletRain
 ]
 
 export default patterns;
