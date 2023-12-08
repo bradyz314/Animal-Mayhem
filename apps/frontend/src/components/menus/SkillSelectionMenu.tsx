@@ -40,7 +40,7 @@ export default function SkillSelectionMenu({hideMenu} : SkillSelectionMenuProps)
             className='fixed z-10 top-0 left-0 w-full h-full overflow-auto flex-col flex items-center justify-center bg-black/[0.5]'
         >
             <div
-                className='absolute flex flex-col items-center justify-center border-8 rounded-md border-emerald-400 shadow-lg shadow-emerald-300 w-1/2 h-3/5 bg-black justify-center items-center'
+                className='absolute flex flex-col items-center justify-center border-8 rounded-md border-emerald-400 shadow-lg shadow-emerald-300 w-1/2 h-4/5 bg-black justify-center items-center'
             >
                 {loading ? (
                     <p
