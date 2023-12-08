@@ -13,8 +13,8 @@ export interface EntityState {
 
 const initialState = {
     name: "",
-    health: 0,
-    maxHealth: 0,
+    health: 1,
+    maxHealth: 1,   
     attack: 0,
     defense: 0,
     skills: []
@@ -62,8 +62,7 @@ export const playerHealthSlice = createSlice({
         updatePlayerDefense: (state, action: PayloadAction<number>) => updateDefense(state, action),
         setPlayerStats: (state, action: PayloadAction<[string, number[]]>) => setInitialStats(state, action),
         initializePlayerSkills: (state) => emptySkillsArray(state),
-        addPlayerSkill: (state, action: PayloadAction<SkillInfo>) => addSkill(state, action)
-
+        addPlayerSkill: (state, action: PayloadAction<SkillInfo>) => addSkill(state, action),
     }
 });
 
