@@ -14,7 +14,7 @@ export default function InfoBar({ player }: InfoBarProps) {
             className='mb-3 border-solid rounded-md border-4 mx-auto border-slate-500'
         >
             <p
-                className='ml-2 text-blue-300 capitalize text-3xl font-bold'
+                className='ml-2 text-blue-300 capitalize text-2xl font-bold'
             >
                 {name}
             </p>
