@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 // Redux
 import { useDispatch } from 'react-redux';
+import { setReward, setState } from '../../features/GameStateSlice';
 import { addEnemySkill, addPlayerSkill, initializeEnemySkills, initializePlayerSkills, setEnemyStats, setPlayerStats, updateEnemyAttack, updateEnemyDefense, updateEnemyHealth, updatePlayerAttack, updatePlayerDefense, updatePlayerHealth } from '../../features/EntitySlice';
 import { resetMessage, setMessage } from '../../features/MessageSlice';
 import { initialize, addBullets } from '../../features/DodgeSlice';
@@ -16,25 +17,34 @@ import { RootState, store } from '../../app/store';
 import patterns from '../../attackPatterns';
 // Axios
 import axios from "axios";
+import ResultMenu from '../menus/ResultMenu';
 
-interface GameScreenProps {
-    levelNo: number,
-}
-
-export default function GameScreen({ levelNo }: GameScreenProps) {
+export default function GameScreen() {
     // Constants
     const dispatch = useDispatch();
+    const levelNo = store.getState().gameState.levelNo;
     const [playerTurn, setPlayerTurn] = useState(true);
     const [enemyImgPath, setEnemyImgPath] = useState('');
     const [canUseSkill, setCanUseSkill] = useState(true);
     const [dodging, setDodging] = useState(false);
+    const [showResult, setShowResult] = useState(false);
     const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
     const handleChange = (targetPlayer: boolean, statToChange: string, delta: number) => {
+        const state = store.getState();
+        delta = Math.floor(delta);
         switch (statToChange) {
             case 'ATK':
                 if (targetPlayer) {
+                    const prevAtk = state.playerStats.attack;
+                    if (prevAtk == 0 && delta < 0) {
+                        return `Player ATK is as low as it goes!`;
+                    }
                     dispatch(updatePlayerAttack(delta));
                 } else {
+                    const prevAtk = state.enemyStats.attack;
+                    if (prevAtk == 0 && delta < 0) {
+                        return `Enemy ATK is as low as it goes! `;
+                    }
                     dispatch(updateEnemyAttack(delta));
                 }
                 break;
@@ -51,15 +61,23 @@ export default function GameScreen({ levelNo }: GameScreenProps) {
                 break;
             case "DEF":
                 if (targetPlayer) {
+                    const prevDef = state.playerStats.attack;
+                    if (prevDef == 0 && delta < 0) {
+                        return `Enemy DEF is as low as it goes! `;
+                    }
                     dispatch(updatePlayerDefense(delta));
                 } else {
+                    const prevDef = state.enemyStats.defense;
+                    if (prevDef == 0 && delta < 0) {
+                        return `Enemy DEF is as low as it goes! `;
+                    }
                     dispatch(updateEnemyDefense(delta));
                 }
         }
         if (delta == 0) {
-            return `There was no change in ${targetPlayer ? `your` : `the enemy's`} ${statToChange}`;
+            return ``;
         } else {
-            return `${targetPlayer ? `You` : `The enemy`} ${delta < 0 ? `lost` : `gained`} ${delta} ${statToChange}!`;
+            return `${targetPlayer ? `You` : `The enemy`} ${delta < 0 ? `lost` : `gained`} ${delta} ${statToChange}! `;
         }
     }
     const calculateChanges = (playerCasting: boolean, skill: SkillInfo, hitCount: number) => {
@@ -67,11 +85,11 @@ export default function GameScreen({ levelNo }: GameScreenProps) {
         let resultString = '';
         for (let i = 0; i < skill.effects.length; i++) {
             const { targetSelf, stat, scaling } = skill.effects[i];
-            const delta = (state.playerStats.attack * scaling[0] + state.playerStats.defense * scaling[1] + state.playerStats.health * scaling[2]) * hitCount;
+            const delta = (state.playerStats.attack * scaling[0] + state.playerStats.defense * scaling[1] + state.playerStats.maxHealth * scaling[2]) * hitCount;
 
             resultString += handleChange(playerCasting ? targetSelf : !targetSelf, stat, delta);
         }
-        dispatch(setMessage(resultString));
+        dispatch(setMessage(resultString === '' ? 'Nothing happened!' : resultString));
     }
     const setSkills = (player: boolean, skills: string[]) => {
         if (player) {
@@ -138,8 +156,7 @@ export default function GameScreen({ levelNo }: GameScreenProps) {
             }
         })
     }
-    // Use Effect to set up User/Enemy
-    useEffect(() => {
+    const initializeStats = async () => {
         axios.get("/account/user").then(username => {
             axios.get("/account/currentData").then(dataRes => {
                 dispatch(setPlayerStats([username.data, [dataRes.data.maxHealth, dataRes.data.attack, dataRes.data.defense]]));
@@ -148,26 +165,23 @@ export default function GameScreen({ levelNo }: GameScreenProps) {
         });
         axios.get(`/level/getLevel?levelNo=${levelNo}`).then(levelRes => {
             const data = levelRes.data.enemyData;
+            dispatch(setReward(levelRes.data.reward));
             dispatch(setEnemyStats([data.name, [data.maxHealth, data.attack, data.defense]]));
             setEnemyImgPath(data.imgPath);
             setSkills(false, data.skills);
         });
         dispatch(resetMessage());
+    }
+    // Use Effect to set up User/Enemy
+    useEffect(() => {
+        initializeStats();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
     // Use Effect to handle gameplay
     useEffect(() => {
         const state: RootState = store.getState();
-        if (state.playerStats.health <= 0) {
-            delay(2000).then(() => {
-                dispatch(setMessage(`You lost!`));
-            })
-            // Transition to RESULT screen
-        } else if (state.enemyStats.health <= 0) {
-            delay(2000).then(() => {
-                dispatch(setMessage('You win!'));
-            });
-            // Transition to RESULT screen
+        if (state.playerStats.health <= 0 || state.enemyStats.health <= 0) {
+            setShowResult(true);
         } else {
             if (!playerTurn) {
                 enemyMove();
@@ -179,6 +193,14 @@ export default function GameScreen({ levelNo }: GameScreenProps) {
     }, [playerTurn]);
     return (
         <div className='grid grid-rows-3 grid-cols-3 min-h-full justify-center items-center'>
+            <button
+                className='rounded-md w-[5%] justify-self-center row-start-1 col-start-1 text-4xl text-white rounded-s m-10 hover:text-red-600'
+                onClick={() => {
+                    dispatch(setState('MAIN MENU'))
+                }}
+            >
+                X
+            </button>
             <EntityDisplay row={'row-start-1'} col={'col-start-3'} player={false} imgPath={enemyImgPath} />
             {dodging ?
                 <DodgeArea /> :
@@ -192,6 +214,7 @@ export default function GameScreen({ levelNo }: GameScreenProps) {
                 delay={delay}
                 disabled={!canUseSkill}
             />
+            {showResult && <ResultMenu />}
         </div>
     );
 }
