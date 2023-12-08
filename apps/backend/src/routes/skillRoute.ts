@@ -56,4 +56,17 @@ skillsRouter.get('/getSkill', async (req, res) => {
     }
 });
 
+skillsRouter.get('/getBuyable', async (req, res) => {
+    try {
+        const skills = await Skill.find({cost: {$exists: true}}).sort('name');
+        if (skills == null) {
+            res.status(500).send('Encountered issue getting skills');
+        } else {
+            res.status(200).send(skills);
+        }
+    } catch(err) {
+        res.status(500).send('Encountered issue getting skill');
+    }
+});
+
 export default skillsRouter;
